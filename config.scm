@@ -6,6 +6,7 @@
 (operating-system
   ;; Use long-term support kernel with additional boot parameters
   (kernel linux-lts
+  (firmware (list linux-firmware))
           (kernel-parameters
            (list
             "quiet"                        ;; Minimal boot messages
