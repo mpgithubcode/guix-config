@@ -6,7 +6,6 @@
 (operating-system
   ;; Use long-term support kernel with additional boot parameters
   (kernel linux-lts
-  (firmware (list linux-firmware))
           (kernel-parameters
            (list
             "quiet"                        ;; Minimal boot messages
@@ -15,7 +14,7 @@
             "cgroup_enable=memory"        ;; Required for Docker memory control
             "swapaccount=1"               ;; Enable cgroup swap accounting
             "intel_iommu=on"              ;; Enable Intel IOMMU for device isolation
-            "iommu=pt")))                 ;; Use passthrough mode for direct device access
+            "iommu=pt"))                 ;; Use passthrough mode for direct device access
 
   ;; Nonfree firmware blobs (Wi-Fi, graphics, etc.)
   (firmware (list linux-firmware))
@@ -52,14 +51,18 @@
 
     ;; Static network configuration (replace "eno1" with your real interface)
     (service static-networking-service-type
-             (static-networking-configuration
-              (addresses
-               (list (network-address
-                      (device "eno1")           ;; Replace with actual interface name
-                      (address "192.168.1.100")
-                      (netmask "255.255.255.0"))))
-              (gateways (list "192.168.1.1"))
-              (name-servers '("1.1.1.1" "8.8.8.8"))))
+     (list
+      (static-networking
+       (addresses
+        (list (network-address
+            (device "eth0")
+            (value "192.168.1.100/24"))))
+         (routes
+          (list (network-route
+            (destination "default")
+            (gateway "192.168.1.1"))))
+          (name-servers '("1.1.1.1" "8.8.8.8"))))
+
 
     (service cups-service-type)           ;; Printer server (optional)
     (service zram-device-service-type     ;; RAM-compressed swap device
