@@ -1,6 +1,6 @@
 ;; Import necessary modules for system configuration
 (use-modules (gnu)
-             (non-gnu packages linux))  ;; For custom kernel like linux-lts
+             (nongnu packages linux))  ;; For custom kernel like linux-lts
 (use-service-modules base cups networking ssh docker)
 
 (operating-system
