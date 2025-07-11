@@ -1,20 +1,21 @@
 ;; Import necessary modules for system configuration
 (use-modules (gnu)
+             (gnu packages docker)
+             (gnu system uuid)
              (nongnu packages linux))  ;; For custom kernel like linux-lts
-(use-service-modules base cups networking ssh docker)
+(use-service-modules base cups networking ssh linux docker dbus desktop)
 
 (operating-system
   ;; Use long-term support kernel with additional boot arguments
   (kernel linux-lts
           (kernel-arguments
-           (list
-            "quiet"                        ;; Minimal boot messages
-            "noatime"                      ;; Don't update access time on file reads
-            "transparent_hugepage=never"  ;; Disable THP for better latency
-            "cgroup_enable=memory"        ;; Required for Docker memory control
-            "swapaccount=1"               ;; Enable cgroup swap accounting
-            "intel_iommu=on"              ;; Enable Intel IOMMU for device isolation
-            "iommu=pt")))                 ;; Use passthrough mode for direct device access
+           (list "quiet"                        ;; Minimal boot messages
+                 "noatime"                      ;; Don't update access time on file reads
+                 "transparent_hugepage=never"  ;; Disable THP for better latency
+                 "cgroup_enable=memory"        ;; Required for Docker memory control
+                 "swapaccount=1"               ;; Enable cgroup swap accounting
+                 "intel_iommu=on"              ;; Enable Intel IOMMU for device isolation
+                 "iommu=pt")))                 ;; Use passthrough mode for direct device access
 
   ;; Nonfree firmware blobs (Wi-Fi, graphics, etc.)
   (firmware (list linux-firmware))
@@ -32,68 +33,73 @@
    (cons*
     (user-account
      (name "alice")
-     (comment "Admin User")
      (group "users")
      (home-directory "/home/alice")
      (supplementary-groups '("wheel" "netdev" "audio" "video" "docker")))
     %base-user-accounts))
 
   ;; System packages available for all users (base tools + Docker)
-  (packages (append %base-packages
-                    (list docker)))  ;; Add docker
+  (packages
+   (append %base-packages
+           (list docker docker-compose)))  ;; Add Docker
 
   ;; System services
   (services
-   (list
-    (service docker-service-type)          ;; Enable Docker service
-    (service openssh-service-type)         ;; Enable SSH server
-    (service ntp-service-type)             ;; Clock sync via NTP
+   (cons*
+    (service dbus-root-service-type)
+    (service elogind-service-type)
+    (service containerd-service-type)
+    (service docker-service-type)
+    (service openssh-service-type)
+    (service ntp-service-type)
 
     ;; Static network configuration (replace "eth0" with your real interface)
     (service static-networking-service-type
-     (list
-      (static-networking
-       (addresses
-        (list (network-address
-               (device "eth0")
-               (value "192.168.1.100/24"))))
-       (routes
-        (list (network-route
-               (destination "default")
-               (gateway "192.168.1.1"))))
-       (name-servers '("1.1.1.1" "8.8.8.8")))))
+             (list
+              (static-networking
+               (addresses
+                (list (network-address
+                       (device "eth0")
+                       (value "192.168.1.100/24"))))
+               (routes
+                (list (network-route
+                       (destination "default")
+                       (gateway "192.168.1.1"))))
+               (name-servers '("1.1.1.1" "8.8.8.8")))))
 
-    (service cups-service-type)           ;; Printer server (optional)
-    (service zram-device-service-type     ;; RAM-compressed swap device
+    (service cups-service-type)
+    (service zram-device-service-type
              (zram-device-configuration
-              (size "1G")))))              ;; Adjust to match available RAM
+              (size "1G")))
+
+    %base-services))  ;; Add core system services
 
   ;; Bootloader configuration
   (bootloader
    (bootloader-configuration
-    (bootloader grub-efi-bootloader)      ;; EFI-compatible bootloader
-    (targets (list "/boot/efi"))          ;; EFI system partition
-    (keyboard-layout keyboard-layout)))   ;; Use same layout in bootloader
+    (bootloader grub-efi-bootloader)
+    (targets (list "/boot/efi"))
+    (keyboard-layout keyboard-layout)))
 
   ;; Filesystem definitions
   (file-systems
    (cons*
     ;; Root partition (read-only, minimal system)
     (file-system
-     (device (label "SYSTEM"))
+     (device (uuid ""))
      (mount-point "/")
      (type "ext4")
      (flags '(read-only)))
 
     ;; EFI partition for GRUB bootloader
     (file-system
-     (device (label "EFI"))
+     (device (uuid ""))
      (mount-point "/boot/efi")
      (type "vfat"))
 
     ;; Persistent partition to store /var, /home, /etc
     (file-system
-     (device (label "DATA"))
+     (device (uuid ""))
      (mount-point "/persist")
      (type "ext4"))
 
