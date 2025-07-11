@@ -5,14 +5,32 @@ set -e
 
 echo "Starting Guix system installation..."
 
+echo "Checking installer config at /mnt/etc/config.scm"
+
+# Path to the config file
+CONFIG_FILE="/mnt/etc/config.scm"
+BACKUP_FILE="/mnt/etc/config.scm.bak"
+
+# Check if the file exists
+if [ -f "$CONFIG_FILE" ]; then
+  echo "Found $CONFIG_FILE. Backing it up..."
+  cp "$CONFIG_FILE" "$BACKUP_FILE"
+  echo "Backup created at $BACKUP_FILE."
+else
+  echo "No $CONFIG_FILE found. Skipping backup."
+fi
+
 # Step 1: Start the Guix build daemon targeting the new system partition
 echo "Starting cow-store on /mnt..."
 herd start cow-store /mnt
 
 # Step 2: Copy and set permissions for the channel configuration
 echo "Copying channels.scm to /mnt/etc/..."
-cp /etc/channels.scm /mnt/etc/
+cp ./channels.scm /mnt/etc/
+cp ./config.scm /mnt/etc/
 chmod +w /mnt/etc/channels.scm
+chmod +w /mnt/etc/config.scm
+
 
 # Step 3: Run the Guix system init using the specified channel configuration
 echo "Running guix system init..."
