@@ -7,7 +7,7 @@
 
 (operating-system
   ;; Use long-term support kernel with additional boot arguments
-  (kernel linux-lts
+  (kernel linux)
           (kernel-arguments
            (list "quiet"                        ;; Minimal boot messages
                  "noatime"                      ;; Don't update access time on file reads
@@ -15,7 +15,7 @@
                  "cgroup_enable=memory"        ;; Required for Docker memory control
                  "swapaccount=1"               ;; Enable cgroup swap accounting
                  "intel_iommu=on"              ;; Enable Intel IOMMU for device isolation
-                 "iommu=pt")))                 ;; Use passthrough mode for direct device access
+                 "iommu=pt"))                 ;; Use passthrough mode for direct device access
 
   ;; Nonfree firmware blobs (Wi-Fi, graphics, etc.)
   (firmware (list linux-firmware))
