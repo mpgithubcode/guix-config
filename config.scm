@@ -86,20 +86,20 @@
    (cons*
     ;; Root partition (read-only, minimal system)
     (file-system
-     (device (uuid ""))
+     (device (file-system-label "SYSTEM"))
      (mount-point "/")
      (type "ext4")
      (flags '(read-only)))
 
     ;; EFI partition for GRUB bootloader
     (file-system
-     (device (uuid ""))
+     (device (file-system-label "EFI"))
      (mount-point "/boot/efi")
      (type "vfat"))
 
     ;; Persistent partition to store /var, /home, /etc
     (file-system
-     (device (uuid ""))
+     (device (file-system-label "DATA"))
      (mount-point "/persist")
      (type "ext4"))
 
