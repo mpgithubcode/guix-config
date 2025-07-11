@@ -84,43 +84,17 @@
   ;; Filesystem definitions
   (file-systems
    (cons*
-    ;; Root partition (read-only, minimal system)
+    ;; Writable root partition
     (file-system
      (device (file-system-label "SYSTEM"))
      (mount-point "/")
-     (type "ext4")
-     (flags '(read-only)))
-
+     (type "ext4"))
+  
     ;; EFI partition for GRUB bootloader
     (file-system
      (device (file-system-label "EFI"))
      (mount-point "/boot/efi")
      (type "vfat"))
-
-    ;; Persistent partition to store /var, /home, /etc
-    (file-system
-     (device (file-system-label "DATA"))
-     (mount-point "/persist")
-     (type "ext4"))
-
-    ;; Bind-mount persistent paths into standard FHS locations
-    (file-system
-     (device "/persist/etc")
-     (mount-point "/etc")
-     (type "none")
-     (flags '(bind-mount)))
-
-    (file-system
-     (device "/persist/var")
-     (mount-point "/var")
-     (type "none")
-     (flags '(bind-mount)))
-
-    (file-system
-     (device "/persist/home")
-     (mount-point "/home")
-     (type "none")
-     (flags '(bind-mount)))
 
     ;; Add essential pseudo-filesystems like /proc, /sys, /dev
     %base-file-systems)))
