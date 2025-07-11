@@ -1,7 +1,7 @@
 ;; Import necessary modules for system configuration
 (use-modules (gnu)
              (non-gnu packages linux))  ;; For custom kernel like linux-lts
-(use-service-modules base cups networking ssh)
+(use-service-modules base cups networking ssh docker)
 
 (operating-system
   ;; Use long-term support kernel with additional boot parameters
@@ -35,15 +35,17 @@
      (comment "Admin User")
      (group "users")
      (home-directory "/home/alice")
-     (supplementary-groups '("wheel" "netdev" "audio" "video")))
+     (supplementary-groups '("wheel" "netdev" "audio" "video" "docker")))
     %base-user-accounts))
 
-  ;; System packages available for all users (base tools)
-  (packages %base-packages)
+  ;; System packages available for all users (base tools + Docker)
+  (packages (append %base-packages
+                    (list docker)))  ;; Add docker
 
   ;; System services
   (services
    (list
+    (service docker-service-type)          ;; Enable Docker service
     (service openssh-service-type)        ;; Enable SSH server
     (service ntp-service-type)            ;; Clock sync via NTP
 
