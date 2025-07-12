@@ -59,6 +59,10 @@ else
   bash partition-drive.sh
 fi
 
+# Try to unmount first if mounted
+umount /mnt/boot/efi 2>/dev/null || true
+umount /mnt 2>/dev/null || true
+
 # Ensure mount points exist
 mkdir -p /mnt
 
