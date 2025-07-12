@@ -59,6 +59,19 @@ else
   bash partition-drive.sh
 fi
 
+# Ensure mount points exist
+mkdir -p /mnt
+mkdir -p /mnt/boot/efi
+
+# Mount SYSTEM partition at /mnt
+mount LABEL=SYSTEM /mnt
+
+# Mount EFI partition at /mnt/boot/efi
+mount -t vfat -o umask=0077 LABEL=EFI /mnt/boot/efi
+
+echo "Partitions mounted:"
+mount | grep '/mnt'
+
 # Path to the config file
 CONFIG_FILE="/mnt/etc/config.scm"
 BACKUP_FILE="/mnt/etc/config.scm.bak"
