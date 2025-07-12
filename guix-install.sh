@@ -61,10 +61,12 @@ fi
 
 # Ensure mount points exist
 mkdir -p /mnt
-mkdir -p /mnt/boot/efi
 
 # Mount SYSTEM partition at /mnt
 mount LABEL=SYSTEM /mnt
+
+
+mkdir -p /mnt/boot/efi
 
 # Mount EFI partition at /mnt/boot/efi
 mount -t vfat -o umask=0077 LABEL=EFI /mnt/boot/efi
