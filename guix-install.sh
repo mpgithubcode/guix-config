@@ -65,7 +65,7 @@ mkdir -p /mnt
 # Mount SYSTEM partition at /mnt
 mount LABEL=SYSTEM /mnt
 
-
+mkdir -p /mnt/etc
 mkdir -p /mnt/boot/efi
 
 # Mount EFI partition at /mnt/boot/efi
