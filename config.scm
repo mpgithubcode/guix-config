@@ -59,7 +59,7 @@
               (static-networking
                (addresses
                 (list (network-address
-                       (device "eth0")
+                       (device "eno1")
                        (value "192.168.1.100/24"))))
                (routes
                 (list (network-route
