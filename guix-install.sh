@@ -1,19 +1,29 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
+# Exit on any error
 set -e
 
+# Paths
 FLAG_FILE="/mnt/etc/.config-edited"
-FORCE_EDIT=false
 
-# Handle arguments
-if [[ "$1" == "-e" ]]; then
-  FORCE_EDIT=true
-fi
+# Flags
+FORCE_EDIT=false
+FORCE_PARTITION=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -e) FORCE_EDIT=true ;;
+    -p) FORCE_PARTITION=true ;;
+    *) echo "Unknown option: $1" && exit 1 ;;
+  esac
+  shift
+done
 
 echo "Starting Guix system installation..."
 echo "Checking installer config at /mnt/etc/config.scm"
 
+# Run edit-config.sh only once unless forced
 if [[ "$FORCE_EDIT" == true || ! -f "$FLAG_FILE" ]]; then
   echo "Running edit-config.sh..."
   bash edit-config.sh
@@ -23,11 +33,35 @@ else
   echo "edit-config.sh has already been run. Skipping (use -e to force)."
 fi
 
+# Function to check if any device has both EFI and SYSTEM labels
+has_efi_and_system() {
+  for disk in /dev/sd?; do
+    # Check if any partitions are labeled EFI and SYSTEM
+    EFI_FOUND=$(lsblk -no LABEL "$disk" | grep -Fx "EFI" || true)
+    SYSTEM_FOUND=$(lsblk -no LABEL "$disk" | grep -Fx "SYSTEM" || true)
+    if [[ -n "$EFI_FOUND" && -n "$SYSTEM_FOUND" ]]; then
+      return 0  # Found both
+    fi
+  done
+  return 1  # Not found
+}
+
+# Run partition script only if not already partitioned
+if [[ "$FORCE_PARTITION" == true ]]; then
+  echo "Forcing partition-drive.sh with -p flag..."
+  bash partition-drive.sh
+elif has_efi_and_system; then
+  echo "EFI and SYSTEM partitions already exist. Skipping partition-drive.sh."
+else
+  echo "No disk found with both EFI and SYSTEM labels. Running partition-drive.sh..."
+  bash partition-drive.sh
+fi
+
 # Path to the config file
 CONFIG_FILE="/mnt/etc/config.scm"
 BACKUP_FILE="/mnt/etc/config.scm.bak"
 
-# Check if the file exists
+# Check if the config file exists and back it up
 if [ -f "$CONFIG_FILE" ]; then
   echo "Found $CONFIG_FILE. Backing it up..."
   cp "$CONFIG_FILE" "$BACKUP_FILE"
@@ -36,22 +70,21 @@ else
   echo "No $CONFIG_FILE found. Skipping backup."
 fi
 
-# Step 1: Start the Guix build daemon targeting the new system partition
+# Start the build daemon
 echo "Starting cow-store on /mnt..."
 herd start cow-store /mnt
 
-# Step 2: Copy and set permissions for the channel configuration
-echo "Copying channels.scm to /mnt/etc/..."
+# Copy channel configuration
+echo "Copying channels.scm and config.scm to /mnt/etc/..."
 cp ./channels.scm /mnt/etc/
 cp ./config.scm /mnt/etc/
-chmod +w /mnt/etc/channels.scm
-chmod +w /mnt/etc/config.scm
+chmod +w /mnt/etc/channels.scm /mnt/etc/config.scm
 
-# Step 3: Run the Guix system init using the specified channel configuration
+# Initialize the Guix system
 echo "Running guix system init..."
 guix time-machine -C /mnt/etc/channels.scm -- system init /mnt/etc/config.scm /mnt
 
-# Step 4: Countdown before reboot
+# Countdown to reboot
 echo "Installation complete. Rebooting in 10 seconds..."
 for i in {10..1}; do
   echo "$i..."
