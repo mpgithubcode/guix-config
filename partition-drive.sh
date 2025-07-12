@@ -43,8 +43,14 @@ parted -s "$DRIVE_PATH" mkpart primary ext4 1GiB 100%
 # Wait for kernel to recognize new partitions
 sleep 2
 
-EFI_PART="${DRIVE_PATH}1"
-SYS_PART="${DRIVE_PATH}2"
+if [[ "$DRIVE_PATH" == *nvme* ]]; then
+  EFI_PART="${DRIVE_PATH}p1"
+  SYS_PART="${DRIVE_PATH}p2"
+else
+  EFI_PART="${DRIVE_PATH}1"
+  SYS_PART="${DRIVE_PATH}2"
+fi
+
 
 # Format partitions
 echo "Formatting EFI partition ($EFI_PART) as FAT32..."
