@@ -2,6 +2,9 @@
 
 CONFIG_FILE="config.scm"
 
+# Source shared SCM utilities
+source ./scm-utils.sh
+
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "Error: '$CONFIG_FILE' not found."
   exit 1
@@ -15,12 +18,6 @@ SETTINGS=(
   "home directory|home-directory|process_home"
 )
 
-# Backup before modifying
-cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
-
-# Temporary sed script
-SED_SCRIPT=$(mktemp)
-
 # Optional post-processors
 process_ip() {
   [[ "$1" == */* ]] && echo "$1" || echo "$1/24"
@@ -30,28 +27,27 @@ process_home() {
   echo "/home/$1"
 }
 
+# Backup before modifying
+cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+# Prompt and apply changes using scm-utils
 for entry in "${SETTINGS[@]}"; do
   IFS='|' read -r LABEL FIELD POST_FUNC <<< "$entry"
 
-  # Extract current value using grep/sed
-  REGEX="\\($FIELD \\\"\\(.*\\)\\\"\\)"
-  CURRENT=$(grep -m1 "($FIELD \"" "$CONFIG_FILE" | sed -E "s/.*$REGEX.*/\2/")
+  CURRENT=$(get_value "$CONFIG_FILE" "$FIELD")
+  if [[ $? -ne 0 ]]; then
+    CURRENT="<not found>"
+  fi
 
-  # Prompt
   read -rp "Enter new $LABEL (current: $CURRENT): " NEW
   NEW=${NEW:-$CURRENT}
 
-  # Optional transformation
+  # Apply transformation if needed
   if [[ -n "$POST_FUNC" ]]; then
     NEW=$($POST_FUNC "$NEW")
   fi
 
-  # Append to sed script
-  echo "s|($FIELD \"[^\"]*\")|($FIELD \"$NEW\")|" >> "$SED_SCRIPT"
+  set_value "$CONFIG_FILE" "$FIELD" "$NEW"
 done
-
-# Apply changes
-sed -i -E -f "$SED_SCRIPT" "$CONFIG_FILE"
-rm "$SED_SCRIPT"
 
 echo "Updated '$CONFIG_FILE'. Backup saved as '${CONFIG_FILE}.bak'."
