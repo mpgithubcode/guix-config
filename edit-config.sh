@@ -7,36 +7,51 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 
-# Extract current values from config.scm
-CURRENT_USER=$(grep -m1 '(name "' "$CONFIG_FILE" | sed -E 's/.*\(name "(.*)"\).*/\1/')
-CURRENT_IP=$(grep -m1 '(value "' "$CONFIG_FILE" | sed -E 's/.*\(value "(.*)"\).*/\1/')
-CURRENT_ZRAM=$(grep -m1 '(size "' "$CONFIG_FILE" | sed -E 's/.*\(size "(.*)"\).*/\1/')
+# Field label | Scheme field name | Optional post-process function name
+SETTINGS=(
+  "username|name|"
+  "IP address|value|process_ip"
+  "ZRAM size|size|"
+  "home directory|home-directory|process_home"
+)
 
-# Prompt user
-read -rp "Enter new username (current: $CURRENT_USER): " NEW_USER
-NEW_USER=${NEW_USER:-$CURRENT_USER}
-
-read -rp "Enter new static IP (current: $CURRENT_IP): " NEW_IP_RAW
-NEW_IP_RAW=${NEW_IP_RAW:-$CURRENT_IP}
-
-# Append /24 if not already present
-if [[ "$NEW_IP_RAW" == */* ]]; then
-  NEW_IP="$NEW_IP_RAW"
-else
-  NEW_IP="${NEW_IP_RAW}/24"
-fi
-
-read -rp "Enter new ZRAM size (current: $CURRENT_ZRAM): " NEW_ZRAM
-NEW_ZRAM=${NEW_ZRAM:-$CURRENT_ZRAM}
-
-# Backup and replace
+# Backup before modifying
 cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
 
-sed -i \
-  -e "s|(name \"[^\"]*\")|(name \"$NEW_USER\")|" \
-  -e "s|(home-directory \"/home/[^\"]*\")|(home-directory \"/home/$NEW_USER\")|" \
-  -e "s|(value \"[0-9./]*\")|(value \"$NEW_IP\")|" \
-  -e "s|(size \"[0-9A-Za-z]*\")|(size \"$NEW_ZRAM\")|" \
-  "$CONFIG_FILE"
+# Temporary sed script
+SED_SCRIPT=$(mktemp)
+
+# Optional post-processors
+process_ip() {
+  [[ "$1" == */* ]] && echo "$1" || echo "$1/24"
+}
+
+process_home() {
+  echo "/home/$1"
+}
+
+for entry in "${SETTINGS[@]}"; do
+  IFS='|' read -r LABEL FIELD POST_FUNC <<< "$entry"
+
+  # Extract current value using grep/sed
+  REGEX="\\($FIELD \\\"\\(.*\\)\\\"\\)"
+  CURRENT=$(grep -m1 "($FIELD \"" "$CONFIG_FILE" | sed -E "s/.*$REGEX.*/\2/")
+
+  # Prompt
+  read -rp "Enter new $LABEL (current: $CURRENT): " NEW
+  NEW=${NEW:-$CURRENT}
+
+  # Optional transformation
+  if [[ -n "$POST_FUNC" ]]; then
+    NEW=$($POST_FUNC "$NEW")
+  fi
+
+  # Append to sed script
+  echo "s|($FIELD \"[^\"]*\")|($FIELD \"$NEW\")|" >> "$SED_SCRIPT"
+done
+
+# Apply changes
+sed -i -E -f "$SED_SCRIPT" "$CONFIG_FILE"
+rm "$SED_SCRIPT"
 
 echo "Updated '$CONFIG_FILE'. Backup saved as '${CONFIG_FILE}.bak'."
