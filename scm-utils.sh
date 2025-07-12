@@ -74,7 +74,8 @@ set_value() {
     BEGIN {
       split(keys, path, " ")
       path_len = length(path)
-      current_depth = 0
+      match_depth = 0
+      in_match = 0
     }
 
     function trim(str) {
@@ -83,31 +84,28 @@ set_value() {
     }
 
     function get_key(str,   m) {
-      match(str, /^\(([a-zA-Z0-9-]+)[ \t]/, m)
+      match(str, /^\(([a-zA-Z0-9-]+)[ \t)]/, m)
       return m[1]
     }
 
     {
       line = $0
       trimmed = trim(line)
+      key = get_key(trimmed)
 
-      # Try to match keys along the path
-      if (match(trimmed, /^\([a-zA-Z0-9-]+[ \t]/)) {
-        key = get_key(trimmed)
+      if (in_match == 0 && key == path[1]) {
+        match_depth = 1
+        in_match = 1
+      } else if (in_match == 1 && match_depth < path_len && key == path[match_depth+1]) {
+        match_depth++
+      }
 
-        # If we’re matching the expected key at current depth
-        if (key == path[current_depth + 1]) {
-          current_depth++
-        } else if (current_depth > 0 && key == path[current_depth]) {
-          # do nothing, still at valid depth
-        } else {
-          # mismatch, reset
-          current_depth = 0
-        }
-
-        # If this is the final match and the actual key is correct
-        if (current_depth == path_len && key == path[path_len]) {
+      # Only replace if full key path matched
+      if (in_match == 1 && match_depth == path_len && key == path[path_len]) {
+        if (trimmed ~ /^\([a-zA-Z0-9-]+[ \t]+"[^"]+"\)/) {
           gsub(/"[^"]*"/, "\"" new_val "\"", line)
+          in_match = 0
+          match_depth = 0
         }
       }
 
