@@ -3,9 +3,25 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "Starting Guix system installation..."
+FLAG_FILE="/mnt/etc/.config-edited"
+FORCE_EDIT=false
 
+# Handle arguments
+if [[ "$1" == "-e" ]]; then
+  FORCE_EDIT=true
+fi
+
+echo "Starting Guix system installation..."
 echo "Checking installer config at /mnt/etc/config.scm"
+
+if [[ "$FORCE_EDIT" == true || ! -f "$FLAG_FILE" ]]; then
+  echo "Running edit-config.sh..."
+  bash edit-config.sh
+  touch "$FLAG_FILE"
+  echo "edit-config.sh has been run. Marker created at $FLAG_FILE."
+else
+  echo "edit-config.sh has already been run. Skipping (use -e to force)."
+fi
 
 # Path to the config file
 CONFIG_FILE="/mnt/etc/config.scm"
@@ -30,7 +46,6 @@ cp ./channels.scm /mnt/etc/
 cp ./config.scm /mnt/etc/
 chmod +w /mnt/etc/channels.scm
 chmod +w /mnt/etc/config.scm
-
 
 # Step 3: Run the Guix system init using the specified channel configuration
 echo "Running guix system init..."
