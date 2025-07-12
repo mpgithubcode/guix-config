@@ -1,3 +1,62 @@
+#!/bin/bash
+
+CONFIG_FILE="config.scm"
+
+# ─────────── Parse key path into array ───────────
+parse_key_path() {
+  local -n result=$1
+  shift
+  result=("$@")
+}
+
+# ─────────── Find matching lines for a key path ───────────
+find_key_line() {
+  local file="$1"
+  shift
+  local key_path=("$@")
+  local matched=0
+  local indent=""
+
+  while IFS= read -r line; do
+    for key in "${key_path[@]}"; do
+      if echo "$line" | grep -q "(${key} "; then
+        indent+="  "
+        matched=$((matched + 1))
+        break
+      fi
+    done
+
+    if [[ $matched -eq ${#key_path[@]} ]]; then
+      echo "$line"
+      return 0
+    fi
+  done < "$file"
+
+  return 1
+}
+
+# ─────────── Get value ───────────
+get_value() {
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: get_value <file> <key> [subkey...]"
+    return 1
+  fi
+
+  local file="$1"
+  shift
+  local key_path=()
+  parse_key_path key_path "$@"
+
+  local line
+  if line=$(find_key_line "$file" "${key_path[@]}"); then
+    echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
+  else
+    echo "Key path not found."
+    return 1
+  fi
+}
+
+# ─────────── Set value ───────────
 set_value() {
   if [[ $# -lt 3 ]]; then
     echo "Usage: set_value <file> <key> [subkey...] <new_value>"
