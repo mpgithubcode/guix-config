@@ -10,29 +10,20 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 
-# Field label | Scheme field name | Optional post-process function name
+# Field label | Scheme field name | Optional transform template (e.g., */24 or /home/*)
 SETTINGS=(
   "username|name|"
-  "IP address|value|process_ip"
+  "IP address|value|*/24"
   "ZRAM size|size|"
-  "home directory|home-directory|process_home"
+  "home directory|home-directory|/home/*"
 )
-
-# Optional post-processors
-process_ip() {
-  [[ "$1" == */* ]] && echo "$1" || echo "$1/24"
-}
-
-process_home() {
-  echo "/home/$1"
-}
 
 # Backup before modifying
 cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
 
 # Prompt and apply changes using scm-utils
 for entry in "${SETTINGS[@]}"; do
-  IFS='|' read -r LABEL FIELD POST_FUNC <<< "$entry"
+  IFS='|' read -r LABEL FIELD TEMPLATE <<< "$entry"
 
   CURRENT=$(get_value "$CONFIG_FILE" "$FIELD")
   if [[ $? -ne 0 ]]; then
@@ -42,9 +33,9 @@ for entry in "${SETTINGS[@]}"; do
   read -rp "Enter new $LABEL (current: $CURRENT): " NEW
   NEW=${NEW:-$CURRENT}
 
-  # Apply transformation if needed
-  if [[ -n "$POST_FUNC" ]]; then
-    NEW=$($POST_FUNC "$NEW")
+  # Apply template transformation if specified
+  if [[ "$TEMPLATE" == *"*"* ]]; then
+    NEW="${TEMPLATE/\*/$NEW}"
   fi
 
   set_value "$CONFIG_FILE" "$FIELD" "$NEW"
