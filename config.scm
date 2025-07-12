@@ -84,17 +84,58 @@
   ;; Filesystem definitions
   (file-systems
    (cons*
-    ;; Writable root partition
+    ;; Root partition (read-only)
     (file-system
      (device (file-system-label "SYSTEM"))
      (mount-point "/")
-     (type "ext4"))
+     (type "ext4")
+     (flags '(read-only)))
   
-    ;; EFI partition for GRUB bootloader
+    ;; EFI system partition for GRUB
     (file-system
      (device (file-system-label "EFI"))
      (mount-point "/boot/efi")
      (type "vfat"))
+  
+    ;; Persistent storage partition
+    (file-system
+     (device (file-system-label "DATA"))
+     (mount-point "/persist")
+     (type "ext4"))
+  
+    ;; Bind-mount persistent directories into standard locations
+    (file-system
+     (device "/persist/etc")
+     (mount-point "/etc")
+     (type "none")
+     (flags '(bind-mount no-auto)))
+  
+    (file-system
+     (device "/persist/var")
+     (mount-point "/var")
+     (type "none")
+     (flags '(bind-mount no-auto)))
+  
+    (file-system
+     (device "/persist/home")
+     (mount-point "/home")
+     (type "none")
+     (flags '(bind-mount no-auto)))
+  
+    ;; Bind-mount /gnu for package store
+    (file-system
+     (device "/persist/gnu")
+     (mount-point "/gnu")
+     (type "none")
+     (flags '(bind-mount no-auto)))
+  
+    ;; Bind-mount /tmp to disk-based directory
+    (file-system
+     (device "/persist/tmp")
+     (mount-point "/tmp")
+     (type "none")
+     (flags '(bind-mount no-auto)))
+   ))
 
     ;; Add essential pseudo-filesystems like /proc, /sys, /dev
     %base-file-systems)))
