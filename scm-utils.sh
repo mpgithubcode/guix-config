@@ -2,20 +2,21 @@
 
 CONFIG_FILE="config.scm"
 
-# ─────────── Get value ───────────
-get_value() {
-  if [[ $# -lt 2 ]]; then
-    echo "Usage: get_value <file> <key> [subkey...]"
-    return 1
-  fi
+# ─────────── Parse key path into array ───────────
+parse_key_path() {
+  local -n result=$1
+  shift
+  result=("$@")
+}
 
+# ─────────── Find matching lines for a key path ───────────
+find_key_line() {
   local file="$1"
   shift
   local key_path=("$@")
-  local indent=""
   local matched=0
+  local indent=""
 
-  # Read the file line-by-line, matching nested keys
   while IFS= read -r line; do
     for key in "${key_path[@]}"; do
       if echo "$line" | grep -q "(${key} "; then
@@ -25,15 +26,34 @@ get_value() {
       fi
     done
 
-    # Match value once full path has been matched
     if [[ $matched -eq ${#key_path[@]} ]]; then
-      echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
+      echo "$line"
       return 0
     fi
   done < "$file"
 
-  echo "Key path not found."
   return 1
+}
+
+# ─────────── Get value ───────────
+get_value() {
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: get_value <file> <key> [subkey...]"
+    return 1
+  fi
+
+  local file="$1"
+  shift
+  local key_path=()
+  parse_key_path key_path "$@"
+
+  local line
+  if line=$(find_key_line "$file" "${key_path[@]}"); then
+    echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
+  else
+    echo "Key path not found."
+    return 1
+  fi
 }
 
 # ─────────── Set value ───────────
@@ -45,10 +65,8 @@ set_value() {
 
   local file="$1"
   shift
-  local new_value="${@: -1}"              # Last argument
-  local key_path=("${@:1:$#-2}")          # All but last two
-  local depth=0
-  local current_path=()
+  local new_value="${@: -1}"
+  local key_path=("${@:1:$#-2}")
   local tmp_file
   tmp_file=$(mktemp)
 
@@ -60,10 +78,8 @@ set_value() {
 
     {
       line = $0
-      # Trim leading spaces
       trimmed = gensub(/^ +/, "", "g", line)
 
-      # Track depth
       if (trimmed ~ /^\(/) {
         key = gensub(/^\(([^ ]+).*/, "\\1", "g", trimmed)
         if (key == path[depth+1]) {
@@ -72,11 +88,9 @@ set_value() {
         }
       }
 
-      # If full path matched and line contains the key to change
       if (depth == length(path) && trimmed ~ /^\([a-zA-Z0-9-]+ "/) {
-        # Replace value
         gsub(/"[^"]*"/, "\"" new_val "\"", line)
-        depth = 0  # Reset after change
+        depth = 0
       }
 
       print line
