@@ -2,35 +2,14 @@
 
 # ─────────── Get value ───────────
 get_value() {
-  if [[ $# -lt 2 ]]; then
-    echo "Usage: get_value <file> <key> [subkey...]"
-    return 1
-  fi
-
   local file="$1"
-  shift
-  local key_path=("$@")
-  local indent=""
-  local matched=0
+  local key="$2"
 
-  while IFS= read -r line; do
-    for key in "${key_path[@]}"; do
-      if echo "$line" | grep -q "(${key} "; then
-        indent+="  "
-        matched=$((matched + 1))
-        break
-      fi
-    done
-
-    if [[ $matched -eq ${#key_path[@]} ]]; then
-      echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
-      return 0
-    fi
-  done < "$file"
-
-  echo "Key path not found."
-  return 1
+  grep -E "\( *$key *\"[^\"]+\" *\)" "$file" \
+    | sed -nE "s/.*\($key +\"([^\"]+)\"\).*/\1/p" \
+    | head -n 1
 }
+
 
 # ─────────── Set value ───────────
 set_value() {
