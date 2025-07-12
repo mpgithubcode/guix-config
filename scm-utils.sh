@@ -74,41 +74,59 @@ set_value() {
     BEGIN {
       split(keys, path, " ")
       path_len = length(path)
-      depth = 0
+      match_depth = 0
+      matched = 0
     }
 
-    function trim(str) {
-      sub(/^[ \t]+/, "", str)
-      return str
+    function get_key(line) {
+      match(line, /^\([[:space:]]*([a-zA-Z0-9-]+)/, m)
+      return m[1]
     }
 
     {
       line = $0
-      trimmed = trim(line)
+      trimmed = line
+      gsub(/^[ \t]+/, "", trimmed)
 
-      # Count open/close parentheses for depth tracking
-      open = gsub(/\(/, "(", line)
-      close = gsub(/\)/, ")", line)
-      net = open - close
-      depth += net
+      # Match each part of the key path
+      if (match(trimmed, /^\([a-zA-Z0-9-]+[ \t]/)) {
+        key = get_key(trimmed)
 
-      # Check if current line contains a matching key at current depth
-      key = gensub(/^\(([^ ]+).*/, "\\1", "g", trimmed)
-      if (key == path[depth]) {
-        match_path[depth] = key
-      }
+        if (key == path[match_depth + 1]) {
+          match_depth++
+        } else if (match_depth > 0 && key == path[match_depth]) {
+          # stay at current level
+        } else {
+          # key does not match, reset
+          match_depth = 0
+        }
 
-      # If we are at the correct depth and match the final key
-      if (depth == path_len && key == path[path_len]) {
-        # Replace value string
-        gsub(/"[^"]*"/, "\"" new_val "\"", line)
+        # If full path matches, change the value
+        if (match_depth == path_len) {
+          # replace only the value string
+          gsub(/"[^"]*"/, "\"" new_val "\"", line)
+          matched = 1
+        }
       }
 
       print line
     }
+
+    END {
+      if (!matched) {
+        print "Warning: No matching key path found." > "/dev/stderr"
+      }
+    }
   ' "$file" > "$tmp_file"
 
-  cp "$file" "${file}.bak"
-  mv "$tmp_file" "$file"
-  echo "Updated. Backup saved as ${file}.bak"
+  # Only overwrite if awk succeeded and file is not empty
+  if [[ -s "$tmp_file" ]]; then
+    cp "$file" "${file}.bak"
+    mv "$tmp_file" "$file"
+    echo "Updated. Backup saved as ${file}.bak"
+  else
+    echo "Error: resulting config was empty. Aborting."
+    rm "$tmp_file"
+    return 1
+  fi
 }
