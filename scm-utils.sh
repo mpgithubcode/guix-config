@@ -73,24 +73,35 @@ set_value() {
   awk -v keys="${key_path[*]}" -v new_val="$new_value" '
     BEGIN {
       split(keys, path, " ")
+      path_len = length(path)
       depth = 0
+    }
+
+    function trim(str) {
+      sub(/^[ \t]+/, "", str)
+      return str
     }
 
     {
       line = $0
-      trimmed = gensub(/^ +/, "", "g", line)
+      trimmed = trim(line)
 
-      if (trimmed ~ /^\(/) {
-        key = gensub(/^\(([^ ]+).*/, "\\1", "g", trimmed)
-        if (key == path[depth+1]) {
-          current_path[depth] = key
-          depth++
-        }
+      # Count open/close parentheses for depth tracking
+      open = gsub(/\(/, "(", line)
+      close = gsub(/\)/, ")", line)
+      net = open - close
+      depth += net
+
+      # Check if current line contains a matching key at current depth
+      key = gensub(/^\(([^ ]+).*/, "\\1", "g", trimmed)
+      if (key == path[depth]) {
+        match_path[depth] = key
       }
 
-      if (depth == length(path) && trimmed ~ /^\([a-zA-Z0-9-]+ "/) {
+      # If we are at the correct depth and match the final key
+      if (depth == path_len && key == path[path_len]) {
+        # Replace value string
         gsub(/"[^"]*"/, "\"" new_val "\"", line)
-        depth = 0
       }
 
       print line
