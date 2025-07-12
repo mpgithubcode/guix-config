@@ -4,7 +4,9 @@
 set -e
 
 # Paths
-FLAG_FILE="/mnt/etc/.config-edited"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FLAG_FILE="$SCRIPT_DIR/.config-edited"
+
 
 # Flags
 FORCE_EDIT=false
