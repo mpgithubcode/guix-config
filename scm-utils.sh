@@ -1,21 +1,17 @@
 #!/bin/bash
 
-CONFIG_FILE="config.scm"
+# ─────────── Get value ───────────
+get_value() {
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: get_value <file> <key> [subkey...]"
+    return 1
+  fi
 
-# ─────────── Parse key path into array ───────────
-parse_key_path() {
-  local -n result=$1
-  shift
-  result=("$@")
-}
-
-# ─────────── Find matching lines for a key path ───────────
-find_key_line() {
   local file="$1"
   shift
   local key_path=("$@")
-  local matched=0
   local indent=""
+  local matched=0
 
   while IFS= read -r line; do
     for key in "${key_path[@]}"; do
@@ -27,33 +23,13 @@ find_key_line() {
     done
 
     if [[ $matched -eq ${#key_path[@]} ]]; then
-      echo "$line"
+      echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
       return 0
     fi
   done < "$file"
 
+  echo "Key path not found."
   return 1
-}
-
-# ─────────── Get value ───────────
-get_value() {
-  if [[ $# -lt 2 ]]; then
-    echo "Usage: get_value <file> <key> [subkey...]"
-    return 1
-  fi
-
-  local file="$1"
-  shift
-  local key_path=()
-  parse_key_path key_path "$@"
-
-  local line
-  if line=$(find_key_line "$file" "${key_path[@]}"); then
-    echo "$line" | sed -nE 's/.*\(([^ ]+) "([^"]+)"\).*/\2/p'
-  else
-    echo "Key path not found."
-    return 1
-  fi
 }
 
 # ─────────── Set value ───────────
@@ -65,55 +41,34 @@ set_value() {
 
   local file="$1"
   shift
-  local new_value="${@: -1}"
-  local key_path=("${@:1:$#-2}")
+  local new_value="${@: -1}"              # Last argument
+  local key_path=("${@:1:$#-2}")          # All but last two
   local tmp_file
   tmp_file=$(mktemp)
 
   awk -v keys="${key_path[*]}" -v new_val="$new_value" '
     BEGIN {
       split(keys, path, " ")
-      path_len = length(path)
       depth = 0
-      match_depth = 0
-    }
-
-    function count_parens(str, open, close, net) {
-      open = gsub(/\(/, "(", str)
-      close = gsub(/\)/, ")", str)
-      return open - close
-    }
-
-    function trim(str) {
-      sub(/^[ \t]+/, "", str)
-      return str
-    }
-
-    function get_key(str,   m) {
-      match(str, /^\(([a-zA-Z0-9-]+)[ \t)]/, m)
-      return m[1]
     }
 
     {
       line = $0
-      trimmed = trim(line)
-      delta = count_parens(line)
-      depth += delta
+      trimmed = gensub(/^ +/, "", "g", line)
 
+      # Count nesting based on keys
       if (trimmed ~ /^\(/) {
-        key = get_key(trimmed)
-
-        if (key == path[match_depth + 1]) {
-          match_depth++
-        } else if (match_depth > 0 && key != path[match_depth]) {
-          # Reset on mismatch
-          match_depth = 0
+        key = gensub(/^\(([^ ]+).*/, "\\1", "g", trimmed)
+        if (key == path[depth+1]) {
+          current_path[depth] = key
+          depth++
         }
       }
 
-      if (match_depth == path_len && trimmed ~ ("^\\(" path[match_depth] " +\"[^\"]*\"\\)")) {
+      # Replace if full path matches and value line is found
+      if (depth == length(path) && trimmed ~ /^\([a-zA-Z0-9-]+ "/) {
         gsub(/"[^"]*"/, "\"" new_val "\"", line)
-        match_depth = 0  # Reset after change
+        depth = 0  # Reset depth to avoid accidental re-matching
       }
 
       print line
