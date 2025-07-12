@@ -74,8 +74,14 @@ set_value() {
     BEGIN {
       split(keys, path, " ")
       path_len = length(path)
+      depth = 0
       match_depth = 0
-      in_match = 0
+    }
+
+    function count_parens(str, open, close, net) {
+      open = gsub(/\(/, "(", str)
+      close = gsub(/\)/, ")", str)
+      return open - close
     }
 
     function trim(str) {
@@ -91,22 +97,23 @@ set_value() {
     {
       line = $0
       trimmed = trim(line)
-      key = get_key(trimmed)
+      delta = count_parens(line)
+      depth += delta
 
-      if (in_match == 0 && key == path[1]) {
-        match_depth = 1
-        in_match = 1
-      } else if (in_match == 1 && match_depth < path_len && key == path[match_depth+1]) {
-        match_depth++
-      }
+      if (trimmed ~ /^\(/) {
+        key = get_key(trimmed)
 
-      # Only replace if full key path matched
-      if (in_match == 1 && match_depth == path_len && key == path[path_len]) {
-        if (trimmed ~ /^\([a-zA-Z0-9-]+[ \t]+"[^"]+"\)/) {
-          gsub(/"[^"]*"/, "\"" new_val "\"", line)
-          in_match = 0
+        if (key == path[match_depth + 1]) {
+          match_depth++
+        } else if (match_depth > 0 && key != path[match_depth]) {
+          # Reset on mismatch
           match_depth = 0
         }
+      }
+
+      if (match_depth == path_len && trimmed ~ ("^\\(" path[match_depth] " +\"[^\"]*\"\\)")) {
+        gsub(/"[^"]*"/, "\"" new_val "\"", line)
+        match_depth = 0  # Reset after change
       }
 
       print line
