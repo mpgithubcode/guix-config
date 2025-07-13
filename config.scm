@@ -8,11 +8,12 @@
 (operating-system
 
  (initrd
-    (lambda (file-systems . rest)
-      (apply base-initrd
-             file-systems
-             #:volatile-root? #t
-             rest)))
+  (lambda (file-systems . rest)
+    (apply base-initrd
+           file-systems
+           #:volatile-root? #t
+           #:shell "/static-bash"  ;; available in Guix initrd
+           rest)))
  
   ;; Use long-term support kernel with additional boot arguments
   (kernel linux)
