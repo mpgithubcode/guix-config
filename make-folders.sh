@@ -41,3 +41,5 @@ chown $USERNAME:$USERNAME /mnt/persist/home/$USERNAME
 
 # Make sure ownership is root for system dirs; you might want to set user ownership on home dir later
 chown root:root /mnt/persist/gnu /mnt/persist/var /mnt/persist/etc /mnt/persist/home /mnt/persist/tmp
+
+lsblk -o NAME,LABEL,MOUNTPOINT
