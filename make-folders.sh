@@ -32,12 +32,12 @@ mkdir -p /mnt/persist
 mount $DATA_DEV /mnt/persist
 
 # Create base directories including the user home directory
-mkdir -p /mnt/{gnu,var,etc,home,home/$USERNAME,tmp}
+mkdir -p /mnt/persist/{gnu,var,etc,home,home/$USERNAME,tmp}
 
-chmod 0555 /mnt/gnu
-chmod 0755 /mnt/var /mnt/etc /mnt/home /mnt/home/$USERNAME
-chmod 1777 /mnt/tmp
-chown $USERNAME:$USERNAME /mnt/home/$USERNAME
+chmod 0555 /mnt/persist/gnu
+chmod 0755 /mnt/persist/var /mnt/persist/etc /mnt/persist/home /mnt/persist/home/$USERNAME
+chmod 1777 /mnt/persist/tmp
+chown $USERNAME:$USERNAME /mnt/persist/home/$USERNAME
 
 # Make sure ownership is root for system dirs; you might want to set user ownership on home dir later
-chown root:root /mnt/gnu /mnt/var /mnt/etc /mnt/home /mnt/tmp
+chown root:root /mnt/persist/gnu /mnt/persist/var /mnt/persist/etc /mnt/persist/home /mnt/persist/tmp
