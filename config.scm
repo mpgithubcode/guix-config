@@ -6,6 +6,14 @@
 (use-service-modules base cups networking ssh linux docker dbus desktop)
 
 (operating-system
+
+ (initrd
+    (lambda (file-systems . rest)
+      (apply base-initrd
+             file-systems
+             #:volatile-root? #t
+             rest)))
+ 
   ;; Use long-term support kernel with additional boot arguments
   (kernel linux)
           (kernel-arguments
