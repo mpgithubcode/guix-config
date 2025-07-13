@@ -108,33 +108,33 @@
      (device "/persist/etc")
      (mount-point "/etc")
      (type "none")
-     (flags '(bind-mount no-auto)))
+     (flags '(bind-mount)))
   
     (file-system
      (device "/persist/var")
      (mount-point "/var")
      (type "none")
-     (flags '(bind-mount no-auto)))
+     (flags '(bind-mount)))
   
     (file-system
      (device "/persist/home")
      (mount-point "/home")
      (type "none")
-     (flags '(bind-mount no-auto)))
+     (flags '(bind-mount)))
   
     ;; Bind-mount /gnu for package store
     (file-system
      (device "/persist/gnu")
      (mount-point "/gnu")
      (type "none")
-     (flags '(bind-mount no-auto)))
+     (flags '(bind-mount)))
   
     ;; Bind-mount /tmp to disk-based directory
     (file-system
      (device "/persist/tmp")
      (mount-point "/tmp")
      (type "none")
-     (flags '(bind-mount no-auto)))
+     (flags '(bind-mount)))
 
     ;; Add essential pseudo-filesystems like /proc, /sys, /dev
     %base-file-systems)))
