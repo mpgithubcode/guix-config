@@ -79,7 +79,7 @@
    (bootloader-configuration
     (bootloader grub-efi-bootloader)
     (targets (list "/boot/efi"))
-    (keyboard-layout (keyboard-layout "us"))))
+    (keyboard-layout keyboard-layout)))
 
   ;; Filesystem definitions
   (file-systems
@@ -137,4 +137,4 @@
      (flags '(bind-mount no-auto)))
 
     ;; Add essential pseudo-filesystems like /proc, /sys, /dev
-    %base-file-systems))
+    %base-file-systems)))
