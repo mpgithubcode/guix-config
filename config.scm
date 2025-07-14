@@ -2,6 +2,7 @@
              (gnu packages docker)
              (gnu system uuid)
              (nongnu packages linux))  ;; For custom kernel like linux-lts
+             (nongnu packages firmware))  ;; Added for linux-firmware
 (use-service-modules base cups networking ssh linux docker dbus desktop)
 
 (operating-system
