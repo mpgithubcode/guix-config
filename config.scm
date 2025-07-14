@@ -6,19 +6,8 @@
 (use-service-modules base cups networking ssh linux docker dbus desktop)
 
 (operating-system
-  ;; Custom initrd with overlayfs and tmpfs support
-  (initrd
-   (lambda (file-systems . rest)
-     (apply base-initrd
-            file-systems
-            #:volatile-root? #t
-            rest)))
 
-  (initrd-modules
-   (append '("overlay" "tmpfs" "ext4" "usbhid" "hid" "ehci-pci" "atkbd")
-           %base-initrd-modules))
-
-  ;; Use LTS Linux kernel with parameters
+  ;; Use kernel with parameters
   (kernel linux)
   (kernel-arguments
    (list "quiet"
@@ -92,8 +81,7 @@
     (file-system
      (device (file-system-label "SYSTEM"))
      (mount-point "/")
-     (type "ext4")
-     (flags '(read-only)))
+     (type "ext4"))
 
     ;; EFI partition
     (file-system
@@ -101,50 +89,4 @@
      (mount-point "/boot/efi")
      (type "vfat"))
 
-    ;; Persistent storage
-    (file-system
-     (device (file-system-label "DATA"))
-     (mount-point "/persist")
-     (type "ext4"))
-
-    ;; Bind-mount persistent dirs
-    (file-system
-     (device "/persist/etc")
-     (mount-point "/etc")
-     (type "none")
-     (flags '(bind-mount)))
-
-    (file-system
-     (device "/persist/var")
-     (mount-point "/var")
-     (type "none")
-     (flags '(bind-mount)))
-
-    (file-system
-     (device "/persist/home")
-     (mount-point "/home")
-     (type "none")
-     (flags '(bind-mount)))
-
-    (file-system
-     (device "/persist/gnu")
-     (mount-point "/gnu")
-     (type "none")
-     (flags '(bind-mount)))
-
-    ;; tmpfs for /run
-    (file-system
-     (device "none")
-     (mount-point "/run")
-     (type "tmpfs")
-     (options "mode=0755,size=250M"))
-
-    ;; tmpfs for /tmp
-    (file-system
-     (device "none")
-     (mount-point "/tmp")
-     (type "tmpfs")
-     (options "mode=1777,size=250M"))
-
-    ;; Pseudo filesystems
     %base-file-systems)))
