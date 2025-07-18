@@ -48,7 +48,9 @@
   ;; Global packages
   (packages
    (append %base-packages
-           (list docker
+           (list git
+                 neovim
+                 docker
                  docker-compose
                  intel-microcode
                  nvidia-driver             ;; Driver
@@ -93,7 +95,7 @@
   ;; Filesystems
   (file-systems
    (cons*
-    ;; Root (read-only)
+    ;; Root
     (file-system
      (device (file-system-label "SYSTEM"))
      (mount-point "/")
