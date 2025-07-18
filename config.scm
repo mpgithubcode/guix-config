@@ -50,8 +50,12 @@
    (append %base-packages
            (list docker
                  docker-compose
-                 intel-microcode                   ;; CPU microcode for Intel i7
-                 nvidia-driver)))                  ;; Proprietary NVIDIA driver from NonGuix
+                 intel-microcode
+                 nvidia-driver             ;; Driver
+                 cuda-toolkit             ;; CUDA compiler, libraries, headers
+                 nvidia-cuda-opencl       ;; OpenCL ICD loader
+                 nvidia-cuda-library)))   ;; CUDA shared libraries
+
 
   ;; Services
   (services
