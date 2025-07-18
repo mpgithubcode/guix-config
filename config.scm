@@ -1,8 +1,11 @@
 (use-modules (gnu)
              (gnu packages docker)
              (gnu system uuid)
-             (nongnu packages linux)  ;; For custom kernel like linux-lts
-             (nongnu packages firmware))  ;; Added for linux-firmware
+             (nongnu packages linux)             ;; For custom kernel like linux-lts
+             (nongnu packages firmware)          ;; Added for linux-firmware
+             (nonguix packages nvidia)           ;; NVIDIA driver & graft helper
+             (nonguix services nvidia)           ;; NVIDIA system service
+             (nongnu system linux-initrd))       ;; Enables microcode-initrd convenience
 (use-service-modules base cups networking ssh linux docker dbus desktop)
 
 (operating-system
@@ -16,10 +19,15 @@
          "cgroup_enable=memory"
          "swapaccount=1"
          "intel_iommu=on"
-         "iommu=pt"))
+         "iommu=pt"
+         "modprobe.blacklist=nouveau"     ;; Disable open-source Nouveau driver
+         "nvidia_drm.modeset=1"))         ;; Enable modesetting for NVIDIA DRM
 
   ;; Nonfree firmware blobs
   (firmware (list linux-firmware))
+
+  ;; Add Intel microcode to the initrd
+  (initrd microcode-initrd)
 
   ;; Locale, time, keyboard, hostname
   (locale "en_US.utf8")
@@ -40,7 +48,10 @@
   ;; Global packages
   (packages
    (append %base-packages
-           (list docker docker-compose)))
+           (list docker
+                 docker-compose
+                 intel-microcode                   ;; CPU microcode for Intel i7
+                 nvidia-driver)))                  ;; Proprietary NVIDIA driver from NonGuix
 
   ;; Services
   (services
@@ -51,6 +62,7 @@
     (service docker-service-type)
     (service openssh-service-type)
     (service ntp-service-type)
+    (service nvidia-service-type)
     (service static-networking-service-type
              (list
               (static-networking
